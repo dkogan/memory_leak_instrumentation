@@ -101,7 +101,13 @@ follow_alloc.pl - trace allocation of a particular size
 
 =head1 DESCRIPTION
 
-Looks at C<perf script> output and reports stuff
+Looks at C<perf script> output to follow allocations of a particular size. This
+is a filter for C<perf script> output, and reports data in the same format, but
+cut down to include only matching data.
+
+A C<realloc> to the desired size is not currently supported, and the script will
+barf. I stop following C<realloc>s from the desired size, so those may end up
+leaking without me knowing.
 
 =head1 REQUIRED ARGUMENTS
 
