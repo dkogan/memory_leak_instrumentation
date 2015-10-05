@@ -98,7 +98,7 @@ follow_alloc.pl - trace allocation of a particular size
 
 =head1 SYNOPSIS
 
- $ ./follow_alloc.pl --size 0x1234
+ $ ./follow_alloc.pl 0x1234
 
 =head1 DESCRIPTION
 
