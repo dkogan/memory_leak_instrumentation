@@ -61,8 +61,7 @@ while(<>)
         $next_after_alloc_type = undef;
 
         $refcount++;
-
-        doprint();
+        doprint("enter");
         next;
     }
     else
@@ -77,7 +76,7 @@ while(<>)
                 }
 
                 delete $addrs{$addr};
-                doprint();
+                doprint('exit');
             }
         }
     }
@@ -85,8 +84,10 @@ while(<>)
 
 sub doprint
 {
+    my $annotation = shift;
+
     $printing = 1;
-    print "Line: $. Refcount: $refcount. $_";
+    print "Line: $. Refcount: $refcount. $annotation $_";
 }
 
 
