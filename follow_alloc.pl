@@ -98,7 +98,7 @@ follow_alloc.pl - trace allocation of a particular size
 
 =head1 SYNOPSIS
 
- $ ./follow_alloc.pl 0x1234
+ $ ./follow_alloc.pl 3072 < script > script.3072
 
 =head1 DESCRIPTION
 
