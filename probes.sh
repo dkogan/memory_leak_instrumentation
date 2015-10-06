@@ -20,29 +20,4 @@ else
     perf probe -x /lib/x86_64-linux-gnu/libc-2.19.so --add 'posix_memalign alignment size'
     perf probe -x /lib/x86_64-linux-gnu/libc-2.19.so --add 'posix_memalign_ret=posix_memalign%return $retval'
     perf probe -x /lib/x86_64-linux-gnu/libc-2.19.so --add 'free mem'
-
-    perf probe -x /usr/lib/x86_64-linux-gnu/libXft.so --add XftFontOpenInfo
-    perf probe -x /usr/lib/x86_64-linux-gnu/libXft.so --add 'XftFontOpenInfo_ref1=XftFontOpenInfo:126 font'
-    perf probe -x /usr/lib/x86_64-linux-gnu/libXft.so --add 'XftFontOpenInfo_cached=XftFontOpenInfo:31 font font->ref info->num_unref_fonts'
-    perf probe -x /usr/lib/x86_64-linux-gnu/libXft.so --add 'XftFontClose:5 font font->ref'
-    perf probe -x /usr/lib/x86_64-linux-gnu/libXft.so --add XftFontCopy
-    perf probe -x /usr/lib/x86_64-linux-gnu/libXft.so --add XftFontDestroy
-    perf probe -x /usr/lib/x86_64-linux-gnu/libXft.so --add XftFontManageMemory
-    perf probe -x /usr/lib/x86_64-linux-gnu/libXft.so --add 'XftFontManageMemory_ret=XftFontManageMemory%return'
-    perf probe -x /usr/lib/x86_64-linux-gnu/libXft.so --add 'XftFontManageMemory_info=XftFontManageMemory:9 info->num_unref_fonts'
-
-    perf probe -x $EMACS_CMD --add 'added_cache=font_matching_entity:35'
-    perf probe -x $EMACS_CMD --add 'added_cache2=font_list_entities:50'
-
-
-# perf probe -x /usr/lib/x86_64-linux-gnu/libXt.so --add XtCloseDisplay
-
-    # perf probe -x $EMACS_CMD --add xftfont_open
-    # perf probe -x $EMACS_CMD --add xftfont_close
-    # perf probe -x $EMACS_CMD --add delete_frame
-    # perf probe -x $EMACS_CMD --add x_delete_terminal
-    # perf probe -x $EMACS_CMD --add 'x_delete_terminal_after_if=x_delete_terminal:9 dpyinfo->display'
-    # perf probe -x $EMACS_CMD --add 'x_term_init'
-    # perf probe -x $EMACS_CMD --add 'x_connection_closed error_message:string'
-
 fi
