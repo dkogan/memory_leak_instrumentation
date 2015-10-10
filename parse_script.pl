@@ -20,7 +20,7 @@ while(<>)
 
     my $type = $1;
     my $ret = $type =~ /_ret$/;
-    $type =~ s/_ret$//;
+    $type =~ s/_(?:ret|[0-9]+)$//;
 
 
     if ( $ret && !( !$prev_ret && $type eq $prev_type) &&

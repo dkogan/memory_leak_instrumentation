@@ -41,6 +41,8 @@ while(<>)
         }
 
         my $type = /probe_libc:([a-z_]+)/;
+        $type =~ s/_[0-9]+$//;
+
         ($next_after_alloc_type) = $type;
 
         # I don't print allocation entries. Those aren't interesting. Allocation
@@ -50,6 +52,8 @@ while(<>)
     elsif( $next_after_alloc_type )
     {
         my $type = /probe_libc:([a-z_]+)/;
+        $type =~ s/_[0-9]+$//;
+
         if($type ne $next_after_alloc_type)
         {
             die "Didn't get ret for type $type";
