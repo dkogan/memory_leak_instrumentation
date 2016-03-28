@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+set +e
+
 EMACS_CLIENT_CMD_RAW=/home/dima/emacs/lib-src/emacsclient
 EMACS_CMD_RAW=/home/dima/emacs/src/emacs
 EMACS_CMD=${EMACS_CMD_RAW:h}/emacs-tst
