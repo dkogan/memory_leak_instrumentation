@@ -10,7 +10,7 @@ CXXFLAGS += -std=gnu++11
 all: alloc_hook.so
 
 %.so: %.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ -fpic -shared $^ $(LDLIBS) -ldl
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ -fpic -shared $^ $(LDLIBS) -ldl -lunwind
 
 clean:
 	rm -rf *.o *.d *.so
