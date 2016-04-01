@@ -163,15 +163,11 @@ static void* report(int64_t arg1, int64_t arg2, int64_t ret, const char* func)
     {
 #ifdef LIBUNWIND
   #if 1
+        // slower than the other option. See comment below
         unw_cursor_t cursor;
         unw_context_t uc;
         unw_word_t ip, offp;
         char name[256] = {'\0'};
-
-
-
-        // unw_set_caching_policy(unw_local_addr_space, UNW_CACHE_GLOBAL);
-        // unw_set_cache_size(unw_local_addr_space, 1024);
 
 
         void* ips[20];
@@ -180,21 +176,22 @@ static void* report(int64_t arg1, int64_t arg2, int64_t ret, const char* func)
         unw_getcontext(&uc);
         unw_init_local(&cursor, &uc);
 
-        while (unw_step(&cursor) > 0
-                &&
-                !unw_get_proc_name (&cursor, name, sizeof(name), &offp)
-               )
+        while (unw_step(&cursor) > 0 &&
+                !unw_get_proc_name (&cursor, name, sizeof(name), &offp))
         {
             unw_get_reg(&cursor, UNW_REG_IP, &ip);
             say_string( "  " );
             say_string(name);
-            say_string(" [0x");
-            say_hex64(ip);
-            say_string("]\n");
+            say_string("\n");
 
             name[0] = '\0';
         }
   #else
+        // much faster than above event if we didn't pull out the function
+        // names. But here the details are internal to the function, so we can't
+        // pull the function names even if we wanted to. AND unw_backtrace()
+        // uses an unexported function internally, so we can't do anything here
+        // without rebuilding libunwind
         void* ips[20];
         int LEN_IPS = sizeof(ips)/sizeof(ips[0]);
         unw_backtrace(ips, LEN_IPS);
@@ -207,6 +204,8 @@ static void* report(int64_t arg1, int64_t arg2, int64_t ret, const char* func)
         }
   #endif
 #else
+        // libbacktrace. A bit slower than libunwind, maybe. But function name
+        // lookup works much better
         void error_callback(void *data __attribute__((unused)),
                             const char *msg,
                             int errnum)
@@ -240,11 +239,14 @@ static void* report(int64_t arg1, int64_t arg2, int64_t ret, const char* func)
                           const char *filename, int lineno,
                           const char *function)
         {
-            say_string( "  " );
-            say_string(function ? function : "null");
-            say_string(" [0x");
-            say_hex64(pc);
-            say_string("]\n");
+            if( !function )
+                say_string( "  null\n" );
+            else
+            {
+                say_string( "  " );
+                say_string(function);
+                say_string("\n");
+            }
             return !(count++ < 10 && pc != 0 && 1+(uint64_t)pc != 0);
         }
         backtrace_full(state, 1, &full_callback, &error_callback, NULL);
