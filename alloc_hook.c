@@ -81,15 +81,31 @@ static void initfd(void)
 
     recursing.initfd = false;
 }
+static void _say_mem(const char* mem, int len)
+{
+    if(len > (int)sizeof(line) - iline) len = sizeof(line) - iline;
+    memcpy(&line[iline], mem, len);
+    iline += len;
+}
+static void say_mem(const char* mem, int len)
+{
+    if(fd < 0)
+        initfd();
+
+    _say_mem(mem, len);
+}
 static void say_string(const char* string)
 {
     if(fd < 0)
         initfd();
 
-    unsigned int len = strlen(string);
-    if(len > sizeof(line) - iline) len = sizeof(line) - iline;
-    strncpy(&line[iline], string, len);
-    iline += len;
+    _say_mem(string, strlen(string));
+}
+static void say_char(const char c)
+{
+    if(fd < 0)
+        initfd();
+    if( iline < (int)sizeof(line)) line[iline++] = c;
 }
 static void say_hex64(uint64_t x)
 {
