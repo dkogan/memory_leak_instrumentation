@@ -21,15 +21,13 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <stdbool.h>
+#include <execinfo.h>
 
 #include <unistd.h>
 #include <malloc.h>
 
 #include <dlfcn.h>
-
-typedef ssize_t (*read_t)(int fd, void *buf, size_t count);
-
-
 
 typedef void *(*malloc_t        )(size_t size);
 typedef void *(*calloc_t        )(size_t nmemb, size_t size);
@@ -42,10 +40,31 @@ typedef void *(*pvalloc_t       )(size_t size);
 typedef void  (*free_t          )(void *ptr);
 
 
-
 static void* report(int64_t arg1, int64_t arg2, int64_t ret, const char* func)
 {
+    // are we recursing? If so, don't report anything
+    static bool in_report = false;
+    if(in_report)
+        return (void*)ret;
+
+
+    in_report = true;
+
     fprintf(stderr, "%s(%#"PRIx64", %#"PRIx64" -> %#"PRIx64"\n", func, arg1, arg2, ret);
+
+    // report backtrace
+    {
+        void* callstack_addrs[20];
+        int depth = backtrace(callstack_addrs, sizeof(callstack_addrs)/sizeof(callstack_addrs[0]));
+
+        char** callstack_strs = backtrace_symbols(callstack_addrs, depth);
+        for(int i=0; i<depth; i++)
+            fprintf(stderr, "  %s\n", callstack_strs[i]);
+        free(callstack_strs);
+    }
+
+    in_report = false;
+
     return (void*)ret;
 }
 
