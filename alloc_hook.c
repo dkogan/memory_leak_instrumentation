@@ -28,6 +28,10 @@
 
 #include <unistd.h>
 #include <malloc.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <string.h>
 
 #include <dlfcn.h>
 
@@ -42,53 +46,120 @@ typedef void *(*pvalloc_t       )(size_t size);
 typedef void  (*free_t          )(void *ptr);
 
 
-#define say(fmt, ...) do { if(!fp) initfp(); fprintf(fp,     fmt, ##__VA_ARGS__); } while(0)
 #define die(fmt, ...) do { fprintf(stderr, fmt, ##__VA_ARGS__); exit(1); } while(0)
 
-static FILE* fp = NULL;
-static bool recursing_initfp = false;
-static bool recursing_report = false;
-
-static void initfp(void)
+static int fd = -1;
+static char line[256];
+static int iline = 0;
+static union
 {
-    recursing_initfp = true;
+    int any;
 
-    fp = fopen("/tmp/log", "w");
+    struct
+    {
+        int initfd : 1;
+        int report : 1;
+    };
+} recursing = {};
+static void initfd(void)
+{
+    recursing.initfd = true;
 
-    recursing_initfp = false;
+    fd = open("/tmp/log", O_RDWR | O_CREAT, 0644);
+    if( fd < 0 )
+        die("Couldn't open file %s\n", "/tmp/log");
+
+    void closefd(void)
+    {
+        close(fd);
+    }
+    atexit(&closefd);
+
+    recursing.initfd = false;
 }
+static void say_string(const char* string)
+{
+    if(fd < 0)
+        initfd();
+
+    unsigned int len = strlen(string);
+    if(len > sizeof(line) - iline) len = sizeof(line) - iline;
+    strncpy(&line[iline], string, len);
+    iline += len;
+}
+static void say_hex64(uint64_t x)
+{
+    if(fd < 0)
+        initfd();
+    for(int i=0; i<16; i++)
+    {
+
+#define ascii_nibble(_n)                                \
+        ({ unsigned char n = _n;                        \
+            n <= 9 ? (n + '0') : (n - 10 + 'A'); })
+
+        if( iline < (int)sizeof(line) )
+            line[iline++] = ascii_nibble(x >> 60);
+        x <<= 4;
+    }
+}
+
+static void say_eol(void)
+{
+    if(fd < 0)
+        initfd();
+
+    if( iline < (int)sizeof(line))
+        line[iline++] = '\n';
+    write(fd, line, iline);
+    iline = 0;
+}
+
+
 
 static void* report(int64_t arg1, int64_t arg2, int64_t ret, const char* func)
 {
     // are we recursing? If so, don't report anything
-    if(recursing_initfp || recursing_report)
+    if(recursing.any)
         return (void*)ret;
 
-    recursing_report = true;
+    recursing.report = true;
 
-    say( "%s(%#"PRIx64", %#"PRIx64") -> %#"PRIx64"\n", func, arg1, arg2, ret);
+    // I want to use printf... here, but something about the standard library is
+    // interacting poorly with the overridden memory allocators (swallowed data
+    // and/or lots of \0), so I do it myself
+    // say( "%s(%#"PRIx64", %#"PRIx64") -> %#"PRIx64"\n", func, arg1, arg2, ret);
+
+    say_string(func);
+    say_string("(0x");
+    say_hex64(arg1);
+    say_string(", ");
+    say_hex64(arg2);
+    say_string(") -> 0x");
+    say_hex64(ret);
+    say_eol();
 
     // report backtrace
-    {
-        unw_cursor_t cursor;
-        unw_context_t uc;
-        unw_word_t ip, offp;
-        char name[256] = {'\0'};
+    // if(0){
+    //     unw_cursor_t cursor;
+    //     unw_context_t uc;
+    //     unw_word_t ip, offp;
+    //     char name[256] = {'\0'};
 
-        unw_getcontext(&uc);
-        unw_init_local(&cursor, &uc);
-        while (unw_step(&cursor) > 0 &&
-               !unw_get_proc_name (&cursor, name, sizeof(name), &offp) )
-        {
+    //     unw_getcontext(&uc);
+    //     unw_init_local(&cursor, &uc);
+    //     while (unw_step(&cursor) > 0 &&
+    //            !unw_get_proc_name (&cursor, name, sizeof)(name), &offp) )
+    //     {
 
-            unw_get_reg(&cursor, UNW_REG_IP, &ip);
-            say( "  %s [%p]\n", name, (void*)ip);
-            name[0] = '\0';
-        }
-        say("\n");
-    }
+    //         unw_get_reg(&cursor, UNW_REG_IP, &ip);
+    //         say( "  %s [%p]\n", name, (void*)ip);
+    //         name[0] = '\0';
+    //     }
+    //     say("\n");
+    // }
 
-    recursing_report = false;
+    recursing.report = false;
 
     return (void*)ret;
 }
@@ -119,15 +190,29 @@ static void _header(void** orig, int* initializing, const char* func)
 
 
 
+extern void* __libc_malloc(size_t size);
 void *malloc(size_t size)
 {
     HEADER(malloc);
+
+    // the libc machinery I use during init time needs a malloc, so I use the
+    // internal one to avoid a loop
+    if(initializing)
+        return (void*)__libc_malloc(size);
+
     return report((int64_t)size, -1, (int64_t)orig(size), __func__);
 }
 
+extern void* __libc_calloc(size_t nmemb, size_t size);
 void *calloc(size_t nmemb, size_t size)
 {
     HEADER(calloc);
+
+    // the libc machinery I use during init time needs a malloc, so I use the
+    // internal one to avoid a loop
+    if(initializing)
+        return (void*)__libc_calloc(nmemb, size);
+
     return report((int64_t)nmemb, (int64_t)size, (int64_t)orig(nmemb, size), __func__);
 }
 
@@ -139,32 +224,34 @@ void *realloc(void *ptr, size_t size)
 
 int   posix_memalign(void **memptr, size_t alignment, size_t size)
 {
-    say("%s UNTRACED\n", __func__);
-    return -1;
+    HEADER(posix_memalign);
+    int result = orig(memptr, alignment, size);
+    if( result != 0 )
+        die("posix_memalign failed!");
+
+    report((int64_t)alignment, (int64_t)size, (int64_t)*memptr, __func__);
+    return result;
 }
 
 void *aligned_alloc(size_t alignment, size_t size)
 {
-    say("%s UNTRACED\n", __func__);
-    return NULL;
+    HEADER(aligned_alloc);
+    return report((int64_t)alignment, (int64_t)size, (int64_t)orig(alignment, size), __func__);
 }
 
 void *valloc(size_t size)
 {
-    say("%s UNTRACED\n", __func__);
-    return NULL;
+    die("%s UNTRACED\n", __func__);
 }
 
 void *memalign(size_t alignment, size_t size)
 {
-    say("%s UNTRACED\n", __func__);
-    return NULL;
+    die("%s UNTRACED\n", __func__);
 }
 
 void *pvalloc(size_t size)
 {
-    say("%s UNTRACED\n", __func__);
-    return NULL;
+    die("%s UNTRACED\n", __func__);
 }
 
 void free(void *ptr)
