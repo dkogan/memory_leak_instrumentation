@@ -69,7 +69,10 @@ static void initfd(void)
 {
     recursing.initfd = true;
 
-    fd = open("/tmp/log", O_RDWR | O_CREAT | O_TRUNC, 0644);
+    char filename[128] = "/tmp/log-";
+    sprintf(filename, "%s-%d", "/tmp/log", getpid());
+
+    fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
     if( fd < 0 )
         die("Couldn't open file %s\n", "/tmp/log");
 
