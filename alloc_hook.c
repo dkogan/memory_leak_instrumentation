@@ -101,26 +101,44 @@ static void say_string(const char* string)
 
     _say_mem(string, strlen(string));
 }
+static void _say_char(const char c)
+{
+    if( iline < (int)sizeof(line))
+        line[iline++] = c;
+}
 static void say_char(const char c)
 {
     if(fd < 0)
         initfd();
-    if( iline < (int)sizeof(line)) line[iline++] = c;
+    _say_char(c);
 }
 static void say_hex64(uint64_t x)
 {
     if(fd < 0)
         initfd();
-    for(int i=0; i<16; i++)
+
+    if( x == 0 )
+        _say_char('0');
+    else if( x+1 == 0)
+        _say_mem("-1", 2);
+    else
     {
+        // skip leading 0s
+        int i = 0;
+        for(; i<16; i++, x <<= 4)
+            if(x >> 60)
+                break;
+
+        for(; i<16; i++, x <<= 4)
+        {
 
 #define ascii_nibble(_n)                                \
-        ({ unsigned char n = _n;                        \
-            n <= 9 ? (n + '0') : (n - 10 + 'A'); })
+            ({ unsigned char n = _n;                    \
+                n <= 9 ? (n + '0') : (n - 10 + 'A'); })
 
-        if( iline < (int)sizeof(line) )
-            line[iline++] = ascii_nibble(x >> 60);
-        x <<= 4;
+            if( iline < (int)sizeof(line) )
+                line[iline++] = ascii_nibble(x >> 60);
+        }
     }
 }
 
@@ -151,11 +169,11 @@ static void* report(int64_t arg1, int64_t arg2, int64_t ret, const char* func)
     // say( "%s(%#"PRIx64", %#"PRIx64") -> %#"PRIx64"\n", func, arg1, arg2, ret);
 
     say_string(func);
-    say_string("(0x");
+    say_char('(');
     say_hex64(arg1);
     say_string(", ");
     say_hex64(arg2);
-    say_string(") -> 0x");
+    say_string(") -> ");
     say_hex64(ret);
     say_char('\n');
 
@@ -182,7 +200,7 @@ static void* report(int64_t arg1, int64_t arg2, int64_t ret, const char* func)
             unw_get_reg(&cursor, UNW_REG_IP, &ip);
             say_string( "  " );
             say_string(name);
-            say_string("\n");
+            say_string('\n');
 
             name[0] = '\0';
         }
@@ -198,7 +216,7 @@ static void* report(int64_t arg1, int64_t arg2, int64_t ret, const char* func)
 
         for(int i=0; i<LEN_IPS && ips[i]; i++)
         {
-            say_string("  [0x");
+            say_string("  [");
             say_hex64((uint64_t)ips[i]);
             say_string("]\n");
         }
@@ -227,7 +245,7 @@ static void* report(int64_t arg1, int64_t arg2, int64_t ret, const char* func)
         int simple_callback(void *data __attribute__((unused)),
                             uintptr_t pc)
         {
-            say_string("  [0x");
+            say_string("  [");
             say_hex64((uint64_t)pc);
             say_string("]\n");
             return !(count++ < 10 && pc != 0 && 1+(uint64_t)pc != 0);
@@ -245,7 +263,7 @@ static void* report(int64_t arg1, int64_t arg2, int64_t ret, const char* func)
             {
                 say_string( "  " );
                 say_string(function);
-                say_string("\n");
+                say_char('\n');
             }
             return !(count++ < 10 && pc != 0 && 1+(uint64_t)pc != 0);
         }
