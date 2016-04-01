@@ -7,7 +7,7 @@ CPPFLAGS := -MMD -g $(FLAGS_OPTIMIZATION) -Wall -Wextra -Wno-missing-field-initi
 CFLAGS += -std=gnu11
 CXXFLAGS += -std=gnu++11
 
-all: alloc_caching_hook.so
+all: alloc_hook.so
 
 %.so: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ -fpic -shared $^ $(LDLIBS) -ldl
