@@ -5,7 +5,7 @@
 
   Build with:
 
-    gcc -o alloc_hook.so -fpic -shared alloc_hook.c
+    gcc -o alloc_hook.so -fpic -shared alloc_hook.c -ldl
 
   Then run with
 
