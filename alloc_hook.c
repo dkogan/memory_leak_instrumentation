@@ -36,6 +36,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+#include <time.h>
 
 #include <dlfcn.h>
 
@@ -158,11 +159,28 @@ static void say_eol(void)
 
 
 
+static int64_t gettime64(void)
+{
+    struct timespec timespec;
+    clock_gettime( CLOCK_MONOTONIC, &timespec );
+    return (int64_t)timespec.tv_sec*1000000LL + timespec.tv_nsec / 1000LL;
+}
+
 static void* report(int64_t arg1, int64_t arg2, int64_t ret, const char* func)
 {
     // are we recursing? If so, don't report anything
     if(recursing.any)
         return (void*)ret;
+
+    // Log data only between timestamps T0 and T1 (in seconds)
+    #define T0 10
+    #define T1 30
+    static int64_t t0 = 0;
+    if( t0 == 0 ) t0 = gettime64();
+    int64_t trelative = gettime64() - t0;
+    if( trelative < T0*1000000L || trelative > T1*1000000L )
+        return (void*)ret;
+
 
     recursing.report = true;
 
