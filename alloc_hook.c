@@ -53,7 +53,7 @@ typedef void  (*free_t          )(void *ptr);
 #define die(fmt, ...) do { fprintf(stderr, fmt, ##__VA_ARGS__); exit(1); } while(0)
 
 static int fd = -1;
-static char line[256];
+static char line[16384];
 static int iline = 0;
 static union
 {
