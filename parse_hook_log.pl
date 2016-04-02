@@ -4,6 +4,9 @@ use strict;
 use warnings;
 use feature 'say';
 
+
+no warnings 'portable';
+
 my $Nbytes_allocated = 0;
 my %alloc;
 
