@@ -7,10 +7,12 @@ CPPFLAGS := -MMD -g $(FLAGS_OPTIMIZATION) -Wall -Wextra -Wno-missing-field-initi
 CFLAGS += -std=gnu11
 CXXFLAGS += -std=gnu++11
 
+LDLIBS := -ldl -lunwind -lbacktrace
+
 all: alloc_hook.so
 
 %.so: %.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ -fpic -shared $^ $(LDLIBS) -ldl -lunwind
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ -fpic -shared $^ $(LDLIBS)
 
 clean:
 	rm -rf *.o *.d *.so
