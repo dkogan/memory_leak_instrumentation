@@ -68,7 +68,7 @@ while(<>)
     else
     {
         # realloc
-        do_free($alloc_prev_addr);
+        do_free($alloc_prev_addr) if $alloc_prev_addr; # realloc(0,x) == malloc(x)
         do_malloc($alloc_size, $alloc_addr);
     }
 }
@@ -94,7 +94,7 @@ sub do_free
     my ($addr) = @_;
     if (!defined $alloc{$addr})
     {
-        say "Unallocated free at $addr. Line $.";
+        say "Unallocated free at " . sprintf('0x%x', $addr) . ". Line $.";
     }
     else
     {
@@ -109,7 +109,7 @@ sub do_malloc
 
     if (defined $alloc{$addr})
     {
-        say "Double alloc at $addr. Line $.";
+        say "Double alloc at " . sprintf('0x%x', $addr) . ". Line $.";
     }
     else
     {
