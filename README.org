@@ -49,7 +49,15 @@ finished then both of these will have false positives:
 - We can report a leak for something that was =free()=-ed after we stopped
   logging
 
-So take all output with a grain of salt, and use your best judgement
+So take all output with a grain of salt, and use your best judgement. The
+backtraces come from =perf=. It reports code addresses, and not line numbers.
+You can get the line numbers line this:
+
+#+begin_example
+addr2line -e LIBRARY ADDRESS
+#+end_example
+
+where =LIBRARY= and =ADDRESS= come from the =perf= backtrace.
 
 *** =plotleaks.sh=
 Takes the output of =parse_script.pl=, and makes a plot of potential leak sizes
@@ -113,6 +121,5 @@ A usage example appears [[http://notes.secretsauce.net/notes/2015/10/05_memory-l
 
 * License
 
-All source released under the terms of the Lesser GNU General Public License,
-version 3 or later: https://www.gnu.org/copyleft/lesser.html
+Released into the public domain. Do whatever you like.
 
