@@ -241,7 +241,7 @@ for my $pid ( keys %contexts )
     for my $realloc0 ( @{$ctx->{realloc0}} )
     {
         my ($bytes,$line) = @$realloc0;
-        say "Leaked " . sprintf('%5d', $bytes) . " bytes at line $line; maybe. realloc0...";
+        say "Leaked " . sprintf('%5d', $bytes) . " bytes at line $line maybe. realloc0...";
     }
 }
 
