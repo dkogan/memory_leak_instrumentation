@@ -9,9 +9,9 @@ use bigint;
 
 
 # the context, indexed on the PID. The elements are
-#   %allocated;
 #   ($prev_addr, $prev_ret, $prev_type, $prev_realloc0_addr, $prev_realloc0_bytes);
 #   $allocating;
+my %allocated;
 my %contexts;
 
 
@@ -28,8 +28,7 @@ while(<>)
     my $newctx = 0;
     if (!exists $contexts{$pid})
     {
-        $contexts{$pid} = { allocated   => {},
-                            doublealloc => [],
+        $contexts{$pid} = { doublealloc => [],
                             realloc0    => []};
         $newctx = 1;
     }
@@ -105,13 +104,13 @@ while(<>)
             my $mem = parsevalue($1);
             if ( $mem != 0)  # free(0) does nothing
             {
-                if (!defined $ctx->{allocated}{$mem})
+                if (!defined $allocated{$mem})
                 {
                     say "PID $pid: Unallocated free at $1. Line $.";
                 }
                 else
                 {
-                    delete $ctx->{allocated}{$mem};
+                    delete $allocated{$mem};
                 }
             }
 
@@ -153,16 +152,16 @@ while(<>)
 
         if ( $type =~ /^(?:[cm]alloc|aligned_alloc)$/ )
         {
-            if (defined $ctx->{allocated}{$addr})
+            if (defined $allocated{$addr})
             {
-                say "PID $pid: Double alloc at $addr. Line $. (prev alloc on line $ctx->{allocated}{$addr}{line})";
+                say "PID $pid: Double alloc at $addr. Line $. (prev alloc on line $allocated{$addr}{line})";
                 push @{$ctx->{doublealloc}}, [$addr,
-                                              $ctx->{allocated}{$addr}{bytes},
-                                              $ctx->{allocated}{$addr}{line}];
+                                              $allocated{$addr}{bytes},
+                                              $allocated{$addr}{line}];
             }
 
-            $ctx->{allocated}{$addr}{bytes} = $ctx->{allocating};
-            $ctx->{allocated}{$addr}{line} = $.;
+            $allocated{$addr}{bytes} = $ctx->{allocating};
+            $allocated{$addr}{line} = $.;
 
             if ( defined $ctx->{prev_realloc0_bytes} && $type eq 'malloc')
             {
@@ -185,7 +184,7 @@ while(<>)
             {
                 my $prev0 = ($ctx->{prev_addr} == 0);
 
-                if (!$prev0 && !defined $ctx->{allocated}{$ctx->{prev_addr}})
+                if (!$prev0 && !defined $allocated{$ctx->{prev_addr}})
                 {
                     say "PID $pid: realloc not alloced at $ctx->{prev_addr}. Line $.";
                     $prev0 = 1;
@@ -193,23 +192,23 @@ while(<>)
 
                 if ($addr != $ctx->{prev_addr})
                 {
-                    if(defined $ctx->{allocated}{$addr})
+                    if(defined $allocated{$addr})
                     {
-                        say "PID $pid: Double realloc at $addr. Line $. (prev alloc on line $ctx->{allocated}{$addr}{line})";
+                        say "PID $pid: Double realloc at $addr. Line $. (prev alloc on line $allocated{$addr}{line})";
                         push @{$ctx->{doublealloc}},
                           [$addr,
-                           $ctx->{allocated}{$addr}{bytes},
-                           $ctx->{allocated}{$addr}{line}];
+                           $allocated{$addr}{bytes},
+                           $allocated{$addr}{line}];
                     }
                 }
 
                 if ( !$prev0 )
                 {
-                    delete $ctx->{allocated}{$ctx->{prev_addr}};
+                    delete $allocated{$ctx->{prev_addr}};
                 }
 
-                $ctx->{allocated}{$addr}{bytes} = $ctx->{allocating};
-                $ctx->{allocated}{$addr}{line} = $.;
+                $allocated{$addr}{bytes} = $ctx->{allocating};
+                $allocated{$addr}{line} = $.;
             }
         }
         else
@@ -221,18 +220,19 @@ while(<>)
 }
 
 
+
+for my $addr ( sort { $allocated{$a}{line} <=> $allocated{$b}{line}} keys %allocated )
+{
+    my ($bytes,$line) = ($allocated{$addr}{bytes},
+                         $allocated{$addr}{line});
+    say "Leaked " . sprintf('%5d bytes at line %d (0x%x)', $bytes, $line, $addr);
+}
+
 for my $pid ( keys %contexts )
 {
     my $ctx = $contexts{$pid};
 
     say "============== PID $pid =============";
-
-    for my $addr ( sort { $ctx->{allocated}{$a}{line} <=> $ctx->{allocated}{$b}{line}} keys %{$ctx->{allocated}} )
-    {
-        my ($bytes,$line) = ($ctx->{allocated}{$addr}{bytes},
-                             $ctx->{allocated}{$addr}{line});
-        say "Leaked " . sprintf('%5d bytes at line %d (0x%x)', $bytes, $line, $addr);
-    }
     for my $doublealloc ( @{$ctx->{doublealloc}} )
     {
         my ($addr,$bytes,$line) = @$doublealloc;
