@@ -114,7 +114,7 @@ while(<>)
                 }
             }
 
-            $ctx->{prev_ret} = $ret; # free has no free-ret so I set that now
+            $ctx->{prev_ret} = 1; # free has no free-ret so I set that now
         }
         else
         {
